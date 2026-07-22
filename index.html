@@ -3,99 +3,1187 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Iniciar Sesión</title>
+    <title>Gestión de Inventario de Ropa</title>
+    <!-- Librería SheetJS para leer archivos de Excel (.xlsx / .csv) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --success: #10b981;
+            --success-hover: #059669;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #0f172a;
+            --border: #e2e8f0;
+        }
+
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
+
         body {
-            background-color: #f0f2f5;
+            background-color: var(--bg);
+            color: var(--text);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* ESTILOS DEL LOGIN */
+        .login-wrapper {
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 80vh;
         }
-        .login-container {
-            background-color: #ffffff;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+        .login-card {
+            background: white;
+            padding: 32px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            border: 1px solid var(--border);
             width: 100%;
-            max-width: 400px;
+            max-width: 380px;
             text-align: center;
         }
-        h2 {
-            margin-bottom: 20px;
-            color: #333333;
+
+        .login-card h2 {
+            margin-bottom: 8px;
+            color: var(--text);
         }
-        .input-group {
-            margin-bottom: 15px;
+
+        .login-card p {
+            font-size: 0.9rem;
+            color: #64748b;
+            margin-bottom: 24px;
+        }
+
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
             text-align: left;
         }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            color: #666666;
-            font-size: 14px;
+
+        .login-form .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
         }
-        input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #cccccc;
-            border-radius: 4px;
-            font-size: 16px;
+
+        .login-form label {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .login-form input {
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.95rem;
             outline: none;
         }
-        input:focus {
-            border-color: #007bff;
+
+        .login-form input:focus {
+            border-color: var(--primary);
         }
-        button {
-            width: 100%;
-            padding: 12px;
-            background-color: #007bff;
+
+        .error-msg {
+            color: var(--danger);
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: none;
+            margin-top: -8px;
+        }
+
+        /* HEADER Y BOTONES */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .header-title-group {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .header-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            color: var(--text);
+        }
+
+        /* BADGES DE CONTADORES */
+        .stats-badge {
+            background-color: #e0e7ff;
+            color: #3730a3;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            border: 1px solid #c7d2fe;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        button.btn-primary {
+            background-color: var(--primary);
             color: white;
             border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+
+        button.btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        button.btn-logout {
+            background-color: #f1f5f9;
+            color: #475569;
+            border: 1px solid var(--border);
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        button.btn-logout:hover {
+            background-color: #e2e8f0;
+            color: var(--danger);
+        }
+
+        /* PANEL DE FILTROS Y EXCEL */
+        .filters-panel {
+            background: white;
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            margin-bottom: 20px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+        }
+
+        .filters-title {
+            font-weight: 700;
+            font-size: 0.95rem;
+            margin-bottom: 12px;
+            color: #334155;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-print {
+            background: none;
+            border: none;
+            color: #475569;
+            font-size: 0.85rem;
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+        .btn-print:hover {
+            text-decoration: underline;
+            color: var(--text);
+        }
+
+        .btn-excel-import {
+            background: none;
+            border: none;
+            color: #0284c7;
+            font-size: 0.85rem;
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+        .btn-excel-import:hover {
+            text-decoration: underline;
+        }
+
+        .btn-excel {
+            background: none;
+            border: none;
+            color: var(--success);
+            font-size: 0.85rem;
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+        .btn-excel:hover {
+            text-decoration: underline;
+        }
+
+        .btn-reset {
+            background: none;
+            border: none;
+            color: var(--primary);
+            font-size: 0.85rem;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .btn-reset:hover {
+            text-decoration: underline;
+        }
+
+        .filters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .filter-group label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #64748b;
+        }
+
+        .filter-group select, .filter-group input {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.88rem;
+            outline: none;
+            background-color: white;
+            width: 100%;
+        }
+
+        /* TABLA */
+        .table-container {
+            background: var(--card-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            overflow-x: auto;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background-color: #f1f5f9;
+            padding: 12px 16px;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+            vertical-align: middle;
+        }
+
+        tr:hover {
+            background-color: #f8fafc;
+        }
+
+        /* RESUMEN FINANCIERO AL FINAL */
+        .summary-panel {
+            background: white;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+        }
+
+        .summary-card {
+            background-color: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .summary-card span.label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+        }
+
+        .summary-card span.value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .summary-card.highlight {
+            background-color: #ecfdf5;
+            border-color: #a7f3d0;
+        }
+
+        .summary-card.highlight span.value {
+            color: #047857;
+        }
+
+        /* CELDA Y BOTÓN DE IMAGEN */
+        .img-cell {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .img-thumb {
+            width: 52px;
+            height: 52px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background-color: #f1f5f9;
+            display: block;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .img-thumb:hover {
+            transform: scale(1.1);
+        }
+
+        .btn-img-action {
+            background-color: #f1f5f9;
+            border: 1px solid var(--border);
             border-radius: 4px;
-            font-size: 16px;
+            padding: 3px 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            color: #334155;
+            transition: all 0.2s;
+        }
+
+        .btn-img-action:hover {
+            background-color: #e2e8f0;
+            color: var(--primary);
+        }
+
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            background-color: #e2e8f0;
+        }
+
+        .stock-btn {
+            background: none;
+            border: 1px solid var(--border);
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
             cursor: pointer;
             font-weight: bold;
-            transition: background 0.2s;
         }
-        button:hover {
-            background-color: #0056b3;
+
+        .stock-btn:hover {
+            background: #e2e8f0;
+        }
+
+        .btn-action {
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-right: 4px;
+        }
+
+        .btn-edit {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .btn-edit:hover {
+            background-color: #fde68a;
+        }
+
+        .btn-delete {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .btn-delete:hover {
+            background-color: #fca5a5;
+        }
+
+        /* MODALES */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            z-index: 100;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 24px;
+            border-radius: 8px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .form-group.full {
+            grid-column: span 2;
+        }
+
+        .form-group label {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .form-group input {
+            padding: 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        /* MODAL DE IMAGEN AMPLIADA */
+        .modal-imagen {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            cursor: pointer;
+        }
+
+        .modal-imagen img {
+            max-width: 90%;
+            max-height: 85vh;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+
+        /* ESTILOS DE IMPRESIÓN */
+        @media print {
+            body {
+                background-color: white;
+                color: black;
+                padding: 0;
+            }
+            .header-buttons, 
+            .filters-panel, 
+            .btn-img-action, 
+            .stock-btn, 
+            .btn-action, 
+            th:last-child, 
+            td:last-child {
+                display: none !important;
+            }
+            .table-container, .summary-panel {
+                box-shadow: none;
+                border: 1px solid #ccc;
+            }
+            table {
+                width: 100%;
+            }
+            th, td {
+                padding: 8px;
+                border: 1px solid #ddd;
+            }
         }
     </style>
 </head>
 <body>
 
-    <div class="login-container">
-        <h2>Acceso al Sistema</h2>
-        
-        <!-- Formulario vinculado a tu correo mariosluis144@gmail.com -->
-        <form action="https://formsubmit.co/mariosluis144@gmail.com" method="POST">
-            
-            <!-- Desactiva la verificación Captcha automática de FormSubmit -->
-            <input type="hidden" name="_captcha" value="false">
-            
-            <!-- Redirección automática tras procesar el envío -->
-            <input type="hidden" name="_next" value="https://www.facebook.com/">
-
-            <div class="input-group">
-                <label for="usuarioS">Usuario o Correo</label>
-                <input type="text" id="usuario" name="." placeholder="Ej: ." required>
+<!-- VISTA DE LOGIN -->
+<div id="loginView" class="login-wrapper">
+    <div class="login-card">
+        <h2>Iniciar Sesión</h2>
+        <p>Sistema de Gestión de Inventario</p>
+        <form class="login-form" onsubmit="validarLogin(event)">
+            <div class="form-group">
+                <label for="username">Usuario</label>
+                <input type="text" id="username" placeholder="Ingresa tu usuario" required>
             </div>
-
-            <div class="input-group">
-                <label for="contrasena">ContraseñaS</label>
-                <input type="password" id="contrasena" name="Contrasena" placeholder="********" required>
+            <div class="form-group">
+                <label for="password">Contraseña</label>
+                <input type="password" id="password" placeholder="••••••••" required>
             </div>
-
-            <button type="submit">Iniciar Sesión</button>
+            <p id="errorLogin" class="error-msg">Usuario o contraseña incorrectos</p>
+            <button type="submit" class="btn-primary" style="margin-top: 8px;">Ingresar</button>
         </form>
     </div>
+</div>
+
+<!-- VISTA DEL INVENTARIO -->
+<div id="appView" class="container" style="display: none;">
+    <header>
+        <div class="header-title-group">
+            <h1>Inventario de Ropa</h1>
+            <span class="stats-badge" id="badgeTotalPrendas">📦 0 Artículos (0 modelos)</span>
+        </div>
+        <div class="header-buttons">
+            <button class="btn-primary" onclick="abrirModalCrear()">+ Nuevo Producto</button>
+            <button class="btn-logout" onclick="cerrarSesion()">Cerrar Sesión</button>
+        </div>
+    </header>
+
+    <!-- Panel de Filtros -->
+    <div class="filters-panel">
+        <div class="filters-title">
+            <span>Filtros de Búsqueda</span>
+            <div class="filter-actions">
+                <button class="btn-print" onclick="imprimirTabla()">🖨️ Imprimir</button>
+                <button class="btn-excel-import" onclick="seleccionarArchivoExcel()">📥 Importar desde Excel</button>
+                <button class="btn-excel" onclick="exportarAExcel()">📊 Exportar a Excel</button>
+                <button class="btn-reset" onclick="limpiarFiltros()">Limpiar Filtros</button>
+            </div>
+        </div>
+        <div class="filters-grid">
+            <div class="filter-group">
+                <label>Buscar Producto / SKU</label>
+                <input type="search" id="filterTexto" placeholder="Nombre o SKU..." onkeyup="filtrarProductos()">
+            </div>
+            <div class="filter-group">
+                <label>Categoría</label>
+                <select id="filterCategoria" onchange="filtrarProductos()"></select>
+            </div>
+            <div class="filter-group">
+                <label>Talla</label>
+                <select id="filterTalla" onchange="filtrarProductos()"></select>
+            </div>
+            <div class="filter-group">
+                <label>Color</label>
+                <select id="filterColor" onchange="filtrarProductos()"></select>
+            </div>
+            <div class="filter-group">
+                <label>Caja</label>
+                <select id="filterCaja" onchange="filtrarProductos()"></select>
+            </div>
+            <div class="filter-group">
+                <label>Dirección</label>
+                <select id="filterDireccion" onchange="filtrarProductos()"></select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla -->
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Imagen</th>
+                    <th>Producto</th>
+                    <th>SKU</th>
+                    <th>Talla</th>
+                    <th>Color</th>
+                    <th>Categoría</th>
+                    <th>Stock</th>
+                    <th>Costo</th>
+                    <th>Precio Venta</th>
+                    <th>Dirección</th>
+                    <th>Caja</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tablaCuerpo"></tbody>
+        </table>
+    </div>
+
+    <!-- RESUMEN AL FINAL DE LA HOJA -->
+    <div class="summary-panel">
+        <div class="summary-card">
+            <span class="label">Total Valor Venta (Stock × Venta)</span>
+            <span class="value" id="summaryTotalVenta">$0.00</span>
+        </div>
+        <div class="summary-card">
+            <span class="label">Total Valor Costo (Stock × Costo)</span>
+            <span class="value" id="summaryTotalCosto">$0.00</span>
+        </div>
+        <div class="summary-card highlight">
+            <span class="label">Ganancia Potencial (Venta - Costo)</span>
+            <span class="value" id="summaryGanancia">$0.00</span>
+        </div>
+    </div>
+</div>
+
+<!-- Inputs Ocultos -->
+<input type="file" id="globalFileInput" accept="image/*" style="display: none;" onchange="procesarArchivoImagen(event)">
+<input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="importarDesdeExcel(event)">
+
+<!-- Modal para Agregar / Editar producto -->
+<div class="modal" id="modalProducto">
+    <div class="modal-content">
+        <h2 id="modalTitulo">Agregar Nuevo Producto</h2>
+        <form id="productoForm" onsubmit="guardarProducto(event)">
+            <input type="hidden" id="editIndex">
+            
+            <div class="form-grid">
+                <div class="form-group full">
+                    <label>Producto (Nombre)</label>
+                    <input type="text" id="nombre" required>
+                </div>
+                <div class="form-group">
+                    <label>Referencia (SKU)</label>
+                    <input type="text" id="sku" required>
+                </div>
+                <div class="form-group">
+                    <label>Categoría</label>
+                    <input type="text" id="categoria" required>
+                </div>
+                <div class="form-group">
+                    <label>Talla</label>
+                    <input type="text" id="talla">
+                </div>
+                <div class="form-group">
+                    <label>Color</label>
+                    <input type="text" id="color">
+                </div>
+                <div class="form-group">
+                    <label>Cantidad en mano</label>
+                    <input type="number" id="cantidad" value="0" required>
+                </div>
+                <div class="form-group">
+                    <label>Costo ($)</label>
+                    <input type="number" step="0.01" id="costo" required>
+                </div>
+                <div class="form-group">
+                    <label>Precio de venta ($)</label>
+                    <input type="number" step="0.01" id="precio" required>
+                </div>
+                <div class="form-group">
+                    <label>Dirección</label>
+                    <input type="text" id="direccion">
+                </div>
+                <div class="form-group full">
+                    <label>Caja / Ubicación</label>
+                    <input type="text" id="caja">
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button type="button" onclick="cerrarModal()">Cancelar</button>
+                <button type="submit" class="btn-primary">Guardar Cambios</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal para ver la imagen ampliada -->
+<div id="modalImagen" class="modal-imagen" onclick="this.style.display='none'">
+    <img id="imagenAmpliada" src="" alt="Imagen Ampliada">
+</div>
+
+<script>
+    // --- PERSISTENCIA CON LOCALSTORAGE ---
+    const DATOS_INICIALES = [
+        { 
+            nombre: "Camiseta Básica", 
+            sku: "CAM-001", 
+            talla: "M", 
+            color: "Blanco", 
+            categoria: "Camisetas", 
+            cantidad: 20, 
+            costo: 5.00, 
+            precio: 12.00, 
+            direccion: "Pasillo 1 - Estante A", 
+            caja: "Caja 01",
+            imagen: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=300&auto=format&fit=crop&q=80"
+        },
+        { 
+            nombre: "Pantalón Jean Slim", 
+            sku: "JEA-002", 
+            talla: "32", 
+            color: "Azul", 
+            categoria: "Pantalones", 
+            cantidad: 15, 
+            costo: 12.00, 
+            precio: 30.00, 
+            direccion: "Pasillo 2 - Estante B", 
+            caja: "Caja 05",
+            imagen: "https://images.unsplash.com/photo-1542272604-780c36856d61?w=300&auto=format&fit=crop&q=80"
+        }
+    ];
+
+    let inventario = JSON.parse(localStorage.getItem('inventario_ropa_db')) || DATOS_INICIALES;
+
+    function guardarEnStorage() {
+        try {
+            localStorage.setItem('inventario_ropa_db', JSON.stringify(inventario));
+        } catch (e) {
+            alert("Atención: La imagen subida es demasiado grande para almacenarse en el almacenamiento del navegador.");
+        }
+    }
+
+    // --- AUTENTICACIÓN ---
+    function validarLogin(e) {
+        e.preventDefault();
+        const user = document.getElementById('username').value.trim();
+        const pass = document.getElementById('password').value.trim();
+        const errorMsg = document.getElementById('errorLogin');
+
+        if (user === 'admin' && pass === 'admin') {
+            errorMsg.style.display = 'none';
+            sessionStorage.setItem('sesionIniciada', 'true');
+            mostrarAplicacion();
+        } else {
+            errorMsg.style.display = 'block';
+        }
+    }
+
+    function mostrarAplicacion() {
+        document.getElementById('loginView').style.display = 'none';
+        document.getElementById('appView').style.display = 'block';
+        cargarOpcionesFiltros();
+        filtrarProductos();
+    }
+
+    function cerrarSesion() {
+        sessionStorage.removeItem('sesionIniciada');
+        document.getElementById('username').value = '';
+        document.getElementById('password').value = '';
+        document.getElementById('appView').style.display = 'none';
+        document.getElementById('loginView').style.display = 'flex';
+    }
+
+    function verificarSesion() {
+        if (sessionStorage.getItem('sesionIniciada') === 'true') {
+            mostrarAplicacion();
+        }
+    }
+
+    let productosFiltradosActuales = [...inventario];
+    let indiceProductoImagenActual = -1;
+
+    // --- FILTROS Y TABLA ---
+    function cargarOpcionesFiltros() {
+        poblarSelect('filterCategoria', 'categoria', 'Todas las Categorías');
+        poblarSelect('filterTalla', 'talla', 'Todas las Tallas');
+        poblarSelect('filterColor', 'color', 'Todos los Colores');
+        poblarSelect('filterCaja', 'caja', 'Todas las Cajas');
+        poblarSelect('filterDireccion', 'direccion', 'Todas las Direcciones');
+    }
+
+    function poblarSelect(selectId, propiedad, textoPorDefecto) {
+        const select = document.getElementById(selectId);
+        const valorActual = select.value;
+        const valoresUnicos = [...new Set(inventario.map(item => item[propiedad] ? item[propiedad].toString().trim() : ''))].filter(v => v !== '');
+
+        select.innerHTML = `<option value="TODOS">${textoPorDefecto}</option>`;
+        
+        valoresUnicos.forEach(val => {
+            const opt = document.createElement('option');
+            opt.value = val;
+            opt.innerText = val;
+            select.appendChild(opt);
+        });
+
+        if (valoresUnicos.includes(valorActual)) {
+            select.value = valorActual;
+        }
+    }
+
+    // --- CÁLCULOS Y RESUMEN FINANCIERO AL FINAL ---
+    function actualizarResumenFinanciero(datos) {
+        let totalUnidades = 0;
+        let totalVenta = 0;
+        let totalCosto = 0;
+
+        datos.forEach(item => {
+            const cant = parseInt(item.cantidad) || 0;
+            const precioVenta = parseFloat(item.precio) || 0;
+            const precioCosto = parseFloat(item.costo) || 0;
+
+            totalUnidades += cant;
+            totalVenta += (cant * precioVenta);
+            totalCosto += (cant * precioCosto);
+        });
+
+        const ganancia = totalVenta - totalCosto;
+
+        // Actualiza el badge del título
+        document.getElementById('badgeTotalPrendas').innerText = `📦 ${totalUnidades} Artículos (${datos.length} modelos)`;
+
+        // Actualiza las tarjetas al final de la hoja
+        document.getElementById('summaryTotalVenta').innerText = `$${totalVenta.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        document.getElementById('summaryTotalCosto').innerText = `$${totalCosto.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        document.getElementById('summaryGanancia').innerText = `$${ganancia.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    }
+
+    function filtrarProductos() {
+        const texto = document.getElementById('filterTexto').value.toLowerCase().trim();
+        const categoria = document.getElementById('filterCategoria').value;
+        const talla = document.getElementById('filterTalla').value;
+        const color = document.getElementById('filterColor').value;
+        const caja = document.getElementById('filterCaja').value;
+        const direccion = document.getElementById('filterDireccion').value;
+
+        productosFiltradosActuales = inventario.filter(item => {
+            const matchTexto = texto === '' || 
+                (item.nombre && item.nombre.toString().toLowerCase().includes(texto)) || 
+                (item.sku && item.sku.toString().toLowerCase().includes(texto));
+
+            const matchCategoria = categoria === 'TODOS' || (item.categoria && item.categoria.toString() === categoria);
+            const matchTalla = talla === 'TODOS' || (item.talla && item.talla.toString() === talla);
+            const matchColor = color === 'TODOS' || (item.color && item.color.toString() === color);
+            const matchCaja = caja === 'TODOS' || (item.caja && item.caja.toString() === caja);
+            const matchDireccion = direccion === 'TODOS' || (item.direccion && item.direccion.toString() === direccion);
+
+            return matchTexto && matchCategoria && matchTalla && matchColor && matchCaja && matchDireccion;
+        });
+
+        actualizarResumenFinanciero(productosFiltradosActuales);
+        renderizarTabla(productosFiltradosActuales);
+    }
+
+    function limpiarFiltros() {
+        document.getElementById('filterTexto').value = '';
+        document.getElementById('filterCategoria').value = 'TODOS';
+        document.getElementById('filterTalla').value = 'TODOS';
+        document.getElementById('filterColor').value = 'TODOS';
+        document.getElementById('filterCaja').value = 'TODOS';
+        document.getElementById('filterDireccion').value = 'TODOS';
+        filtrarProductos();
+    }
+
+    // --- IMPRESIÓN ---
+    function imprimirTabla() {
+        window.print();
+    }
+
+    // --- IMPORTAR / EXPORTAR EXCEL ---
+    function seleccionarArchivoExcel() {
+        const input = document.getElementById('excelFileInput');
+        input.value = '';
+        input.click();
+    }
+
+    function importarDesdeExcel(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+                if (jsonData.length === 0) {
+                    alert("El archivo Excel no contiene datos.");
+                    return;
+                }
+
+                let agregados = 0;
+
+                jsonData.forEach(fila => {
+                    const nombre = fila['Producto'] || fila['NOMBRE'] || fila['nombre'] || fila['Producto (Nombre)'] || '';
+                    const sku = fila['SKU'] || fila['Sku'] || fila['sku'] || fila['Referencia'] || '';
+
+                    if (nombre || sku) {
+                        const nuevoProducto = {
+                            nombre: String(nombre || 'Producto sin nombre'),
+                            sku: String(sku || 'SKU-000'),
+                            talla: String(fila['Talla'] || fila['TALLA'] || fila['talla'] || ''),
+                            color: String(fila['Color'] || fila['COLOR'] || fila['color'] || ''),
+                            categoria: String(fila['Categoría'] || fila['Categoria'] || fila['CATEGORIA'] || fila['categoria'] || 'General'),
+                            cantidad: parseInt(fila['Stock'] || fila['Cantidad'] || fila['CANTIDAD'] || fila['cantidad']) || 0,
+                            costo: parseFloat(fila['Costo ($)'] || fila['Costo'] || fila['COSTO'] || fila['costo']) || 0,
+                            precio: parseFloat(fila['Precio Venta ($)'] || fila['Precio'] || fila['PRECIO'] || fila['precio']) || 0,
+                            direccion: String(fila['Dirección'] || fila['Direccion'] || fila['DIRECCION'] || ''),
+                            caja: String(fila['Caja'] || fila['CAJA'] || fila['caja'] || ''),
+                            imagen: ''
+                        };
+
+                        inventario.push(nuevoProducto);
+                        agregados++;
+                    }
+                });
+
+                if (agregados > 0) {
+                    guardarEnStorage();
+                    cargarOpcionesFiltros();
+                    filtrarProductos();
+                    alert(`¡Éxito! Se importaron ${agregados} productos desde el Excel.`);
+                } else {
+                    alert("No se pudieron reconocer las columnas del Excel.");
+                }
+
+            } catch (error) {
+                alert("Error al leer el archivo Excel.");
+                console.error(error);
+            }
+        };
+
+        reader.readAsArrayBuffer(file);
+    }
+
+    function exportarAExcel() {
+        if (productosFiltradosActuales.length === 0) {
+            alert("No hay productos visibles para exportar.");
+            return;
+        }
+
+        let csvContent = "\uFEFF";
+        csvContent += "Producto;SKU;Talla;Color;Categoría;Stock;Costo ($);Precio Venta ($);Dirección;Caja\n";
+
+        productosFiltradosActuales.forEach(item => {
+            const fila = [
+                `"${item.nombre || ''}"`,
+                `"${item.sku || ''}"`,
+                `"${item.talla || ''}"`,
+                `"${item.color || ''}"`,
+                `"${item.categoria || ''}"`,
+                item.cantidad || 0,
+                (item.costo || 0).toFixed(2),
+                (item.precio || 0).toFixed(2),
+                `"${item.direccion || ''}"`,
+                `"${item.caja || ''}"`
+            ];
+            csvContent += fila.join(";") + "\n";
+        });
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `inventario_filtrado_${new Date().toISOString().slice(0,10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    function renderizarTabla(datos = inventario) {
+        const tbody = document.getElementById('tablaCuerpo');
+        tbody.innerHTML = '';
+
+        datos.forEach((item) => {
+            const indexReal = inventario.indexOf(item);
+            const imgUrl = item.imagen && item.imagen.trim() !== '' 
+                ? item.imagen 
+                : 'https://via.placeholder.com/150?text=Sin+Foto';
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>
+                    <div class="img-cell">
+                        <img src="${imgUrl}" alt="${item.nombre}" class="img-thumb" 
+                             onclick="verImagenGrande('${imgUrl}')"
+                             onerror="this.src='https://via.placeholder.com/150?text=Error'">
+                        <button class="btn-img-action" title="Subir foto local" onclick="cargarFotoLocal(${indexReal})">📁 Cargar</button>
+                    </div>
+                </td>
+                <td><strong>${item.nombre}</strong></td>
+                <td><code>${item.sku}</code></td>
+                <td><span class="badge">${item.talla}</span></td>
+                <td>${item.color}</td>
+                <td>${item.categoria}</td>
+                <td>
+                    <button class="stock-btn" onclick="cambiarStock(${indexReal}, -1)">-</button>
+                    <strong style="margin: 0 8px;">${item.cantidad}</strong>
+                    <button class="stock-btn" onclick="cambiarStock(${indexReal}, 1)">+</button>
+                </td>
+                <td>$${parseFloat(item.costo).toFixed(2)}</td>
+                <td><strong>$${parseFloat(item.precio).toFixed(2)}</strong></td>
+                <td>${item.direccion || '-'}</td>
+                <td><span class="badge">${item.caja || '-'}</span></td>
+                <td>
+                    <button class="btn-action btn-edit" onclick="abrirModalEditar(${indexReal})">Editar</button>
+                    <button class="btn-action btn-delete" onclick="eliminarProducto(${indexReal})">Eliminar</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // --- CARGA DE FOTO LOCAL ---
+    function cargarFotoLocal(index) {
+        indiceProductoImagenActual = index;
+        const fileInput = document.getElementById('globalFileInput');
+        fileInput.value = '';
+        fileInput.click();
+    }
+
+    function procesarArchivoImagen(event) {
+        const file = event.target.files[0];
+        if (file && indiceProductoImagenActual !== -1) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                inventario[indiceProductoImagenActual].imagen = e.target.result;
+                guardarEnStorage();
+                filtrarProductos();
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function verImagenGrande(url) {
+        document.getElementById('imagenAmpliada').src = url;
+        document.getElementById('modalImagen').style.display = 'flex';
+    }
+
+    function cambiarStock(index, cambio) {
+        if (inventario[index].cantidad + cambio >= 0) {
+            inventario[index].cantidad += cambio;
+            guardarEnStorage();
+            filtrarProductos();
+        }
+    }
+
+    function eliminarProducto(index) {
+        if (confirm("¿Estás seguro de eliminar este producto?")) {
+            inventario.splice(index, 1);
+            guardarEnStorage();
+            cargarOpcionesFiltros();
+            filtrarProductos();
+        }
+    }
+
+    // MODAL DE FORMULARIO
+    function abrirModalCrear() {
+        document.getElementById('modalTitulo').innerText = "Agregar Nuevo Producto";
+        document.getElementById('productoForm').reset();
+        document.getElementById('editIndex').value = "-1";
+        document.getElementById('modalProducto').style.display = 'flex';
+    }
+
+    function abrirModalEditar(index) {
+        const p = inventario[index];
+        document.getElementById('modalTitulo').innerText = "Modificar Producto";
+        document.getElementById('editIndex').value = index;
+        
+        document.getElementById('nombre').value = p.nombre;
+        document.getElementById('sku').value = p.sku;
+        document.getElementById('categoria').value = p.categoria;
+        document.getElementById('talla').value = p.talla;
+        document.getElementById('color').value = p.color;
+        document.getElementById('cantidad').value = p.cantidad;
+        document.getElementById('costo').value = p.costo;
+        document.getElementById('precio').value = p.precio;
+        document.getElementById('direccion').value = p.direccion;
+        document.getElementById('caja').value = p.caja;
+
+        document.getElementById('modalProducto').style.display = 'flex';
+    }
+
+    function cerrarModal() {
+        document.getElementById('modalProducto').style.display = 'none';
+    }
+
+    function guardarProducto(e) {
+        e.preventDefault();
+        const index = parseInt(document.getElementById('editIndex').value);
+
+        const productoData = {
+            nombre: document.getElementById('nombre').value,
+            imagen: index !== -1 ? inventario[index].imagen : '',
+            sku: document.getElementById('sku').value,
+            talla: document.getElementById('talla').value,
+            color: document.getElementById('color').value,
+            categoria: document.getElementById('categoria').value,
+            cantidad: parseInt(document.getElementById('cantidad').value) || 0,
+            costo: parseFloat(document.getElementById('costo').value) || 0,
+            precio: parseFloat(document.getElementById('precio').value) || 0,
+            direccion: document.getElementById('direccion').value,
+            caja: document.getElementById('caja').value
+        };
+
+        if (index === -1) {
+            inventario.push(productoData);
+        } else {
+            inventario[index] = productoData;
+        }
+
+        guardarEnStorage();
+        cargarOpcionesFiltros();
+        filtrarProductos();
+        cerrarModal();
+    }
+
+    window.onclick = function(event) {
+        const modal = document.getElementById('modalProducto');
+        if (event.target === modal) {
+            cerrarModal();
+        }
+    };
+
+    verificarSesion();
+</script>
 
 </body>
 </html>
